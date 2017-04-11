@@ -120,7 +120,7 @@ py_binary(
     ],
     deps = [
         ":flowers_data",
-        ":inception_train",
+        ":inception_distributed_train",
     ],
 )
 
