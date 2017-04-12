@@ -19,6 +19,8 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
+import ast
+import os
 
 from inception import inception_distributed_train
 from inception.flowers_data import FlowersData
@@ -32,18 +34,19 @@ def main(unused_args):
 
   # Extract all the hostnames for the ps and worker jobs to construct the
   # cluster spec.
-  ps_hosts = FLAGS.ps_hosts.split(',')
-  worker_hosts = FLAGS.worker_hosts.split(',')
-  tf.logging.info('PS hosts are: %s' % ps_hosts)
-  tf.logging.info('Worker hosts are: %s' % worker_hosts)
+  CLUSTER_CONFIG = os.environ.get('CLUSTER_CONFIG')
+  if CLUSTER_CONFIG:
+    cluster_def = ast.literal_eval(CLUSTER_CONFIG)
+    tf.logging.info('Cluster config is: %s' % cluster_def)
+  else:
+    ps_hosts = FLAGS.ps_hosts.split(',')
+    worker_hosts = FLAGS.worker_hosts.split(',')
+    tf.logging.info('PS hosts are: %s' % ps_hosts)
+    tf.logging.info('Worker hosts are: %s' % worker_hosts)
+    cluster_def = {"ps": ps_hosts, "worker": worker_hosts}
 
-  cluster_spec = tf.train.ClusterSpec({'ps': ps_hosts,
-                                       'worker': worker_hosts})
-  server = tf.train.Server(
-      {'ps': ps_hosts,
-       'worker': worker_hosts},
-      job_name=FLAGS.job_name,
-      task_index=FLAGS.task_id)
+  cluster_spec = tf.train.ClusterSpec(cluster_def)
+  server = tf.train.Server(cluster_def, job_name=FLAGS.job_name, task_index=FLAGS.task_id)
 
   if FLAGS.job_name == 'ps':
     # `ps` jobs wait for incoming connections from the workers.
